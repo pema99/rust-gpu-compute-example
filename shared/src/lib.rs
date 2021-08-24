@@ -1,10 +1,9 @@
 #![no_std]
 
-use bytemuck_derive::{Pod, Zeroable};
-
 #[repr(C)]
-#[derive(Debug, Copy, Clone, Pod, Zeroable)]
+#[derive(Debug, Copy, Clone)]
 pub struct TestVec {
     pub a: u32,
-    pub b: u32
+    pub b: u32,
+    pub c: u32
 }

@@ -21,4 +21,5 @@ pub fn main_cs(
 ) {
     let index = id.x as usize;
     buffer[index].a += buffer[index].b;
+    buffer[index].c = id.x;
 }

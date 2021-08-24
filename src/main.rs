@@ -2,7 +2,25 @@ use wgpu::util::DeviceExt;
 
 use std::{convert::TryInto, num::NonZeroU64};
 
-pub async fn execute_kernel(shader_binary: wgpu::ShaderModuleDescriptor<'static>, input: Vec<u64>) -> Option<Vec<u64>> {
+fn opaque_array_to_bytes<T>(arr: &[T]) -> &[u8] {
+    unsafe {
+        std::slice::from_raw_parts(
+            (arr.as_ptr()) as *const u8,
+            std::mem::size_of::<T>() * arr.len(),
+        )
+    }
+}
+
+fn bytes_to_opaque_array<T>(arr: &[u8]) -> &[T] {
+    unsafe {
+        std::slice::from_raw_parts(
+            (arr.as_ptr()) as *const T,
+            arr.len() / std::mem::size_of::<T>(),
+        )
+    }
+}
+
+pub async fn execute_kernel<T: Clone>(shader_binary: wgpu::ShaderModuleDescriptor<'static>, input: Vec<T>) -> Option<Vec<T>> {
     // Create wpgu instance
     let instance = wgpu::Instance::new(wgpu::BackendBit::PRIMARY);
     let adapter = instance
@@ -30,11 +48,7 @@ pub async fn execute_kernel(shader_binary: wgpu::ShaderModuleDescriptor<'static>
 
     // Load shader
     let module = device.create_shader_module(&shader_binary);
-    let src = input
-        .iter()
-        .map(|x| u64::to_ne_bytes(*x)) // Not sure which endianness is correct to use here
-        .flat_map(core::array::IntoIter::new)
-        .collect::<Vec<_>>();
+    let src = opaque_array_to_bytes(input.as_slice());
 
     // Create dummy bind group layout since some GPUs don't support empty bind layout group
     let bind_group_layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
@@ -123,10 +137,7 @@ pub async fn execute_kernel(shader_binary: wgpu::ShaderModuleDescriptor<'static>
     // Fetch result as u32 vec
     if let Ok(_) = buffer_future.await {
         let data = buffer_slice.get_mapped_range();
-        let result = data
-            .chunks_exact(8)
-            .map(|b| u64::from_ne_bytes(b.try_into().unwrap()))
-            .collect::<Vec<_>>();
+        let result = bytes_to_opaque_array(&data).to_owned();
         drop(data);
         readback_buffer.unmap();
         Some(result)
@@ -149,20 +160,10 @@ fn main() {
         flags: wgpu::ShaderFlags::default(),
     };
 
-    let data = (0..128)
-        .map(|x| shared::TestVec { a: x, b: x * 2 })
-        .map(|x| bytemuck::cast::<_, u64>(x))
-        .collect::<Vec<_>>();
+    let data = (0..128).map(|x| shared::TestVec { a: x, b: x * 2, c: 0 }).collect::<Vec<_>>();
 
     match futures::executor::block_on(execute_kernel(shader_binary, data)) {
-        Some(out) => {
-            let result = out
-                .iter()
-                .map(|x| bytemuck::cast::<_, shared::TestVec>(*x))
-                .collect::<Vec<_>>();
-
-            println!("Execution result: {:?}", result)
-        },
+        Some(result) => println!("Execution result: {:?}", result),
         None => println!("Error executing kernel")
     }
 }
