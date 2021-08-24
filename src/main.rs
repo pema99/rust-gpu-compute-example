@@ -1,6 +1,7 @@
 use wgpu::util::DeviceExt;
 
 use std::{convert::TryInto, num::NonZeroU64};
+use spirv_std::glam::*;
 
 fn opaque_array_to_bytes<T>(arr: &[T]) -> &[u8] {
     unsafe {
@@ -160,7 +161,13 @@ fn main() {
         flags: wgpu::ShaderFlags::default(),
     };
 
-    let data = (0..128).map(|x| shared::TestVec { a: x, b: x * 2, c: 0 }).collect::<Vec<_>>();
+    let data = (0..64).map(|x| { 
+        let id = x as f32;
+        shared::Ray {
+            origin: vec4(id * 1.0, id * 2.0, id * 3.0, id * 4.0),
+            direction: vec4(id * 4.0, id * 3.0, id * 2.0, id * 1.0)
+        }
+    }).collect::<Vec<_>>();
 
     match futures::executor::block_on(execute_kernel(shader_binary, data)) {
         Some(result) => println!("Execution result: {:?}", result),

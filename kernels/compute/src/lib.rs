@@ -11,15 +11,14 @@ use glam::UVec3;
 use spirv_std::glam;
 #[cfg(not(target_arch = "spirv"))]
 use spirv_std::macros::spirv;
-use shared::TestVec;
+use shared::Ray;
 
 // LocalSize/numthreads of (x = 64, y = 1, z = 1)
 #[spirv(compute(threads(64)))]
 pub fn main_cs(
     #[spirv(global_invocation_id)] id: UVec3,
-    #[spirv(storage_buffer, descriptor_set = 0, binding = 0)] buffer: &mut [TestVec],
+    #[spirv(storage_buffer, descriptor_set = 0, binding = 0)] buffer: &mut [Ray],
 ) {
     let index = id.x as usize;
-    buffer[index].a += buffer[index].b;
-    buffer[index].c = id.x;
+    buffer[index].origin += buffer[index].direction;
 }
