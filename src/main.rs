@@ -79,7 +79,7 @@ pub async fn execute_kernel(shader_binary: wgpu::ShaderModuleDescriptor<'static>
 
     // Create buffer for CPU -> GPU and storage
     let storage_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-        label: Some("Collatz Conjecture Input"),
+        label: None,
         contents: &src,
         usage: wgpu::BufferUsage::STORAGE
             | wgpu::BufferUsage::COPY_DST
