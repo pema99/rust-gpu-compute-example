@@ -10,6 +10,7 @@ edition = "2018"
 futures = { version = "0.3", default-features = false, features = ["std", "executor"] }
 wgpu = "0.9"
 bytemuck = "1.7.2"
+shared = { "path" = "shared" }
 
 [build-dependencies]
 spirv-builder = { git = "https://github.com/EmbarkStudios/rust-gpu" }

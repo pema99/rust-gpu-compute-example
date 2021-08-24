@@ -2,7 +2,7 @@ use wgpu::util::DeviceExt;
 
 use std::{convert::TryInto, num::NonZeroU64};
 
-pub async fn execute_kernel(shader_binary: wgpu::ShaderModuleDescriptor<'static>, input: Vec<u32>) -> Option<Vec<u32>> {
+pub async fn execute_kernel(shader_binary: wgpu::ShaderModuleDescriptor<'static>, input: Vec<u64>) -> Option<Vec<u64>> {
     // Create wpgu instance
     let instance = wgpu::Instance::new(wgpu::BackendBit::PRIMARY);
     let adapter = instance
@@ -32,7 +32,7 @@ pub async fn execute_kernel(shader_binary: wgpu::ShaderModuleDescriptor<'static>
     let module = device.create_shader_module(&shader_binary);
     let src = input
         .iter()
-        .map(|x| u32::to_ne_bytes(*x)) // Not sure which endianness is correct to use here
+        .map(|x| u64::to_ne_bytes(*x)) // Not sure which endianness is correct to use here
         .flat_map(core::array::IntoIter::new)
         .collect::<Vec<_>>();
 
@@ -124,8 +124,8 @@ pub async fn execute_kernel(shader_binary: wgpu::ShaderModuleDescriptor<'static>
     if let Ok(_) = buffer_future.await {
         let data = buffer_slice.get_mapped_range();
         let result = data
-            .chunks_exact(4)
-            .map(|b| u32::from_ne_bytes(b.try_into().unwrap()))
+            .chunks_exact(8)
+            .map(|b| u64::from_ne_bytes(b.try_into().unwrap()))
             .collect::<Vec<_>>();
         drop(data);
         readback_buffer.unmap();
@@ -149,8 +149,20 @@ fn main() {
         flags: wgpu::ShaderFlags::default(),
     };
 
-    match futures::executor::block_on(execute_kernel(shader_binary, (0..128).collect())) {
-        Some(res) => println!("Execution result: {:?}", res),
+    let data = (0..128)
+        .map(|x| shared::TestVec { a: x, b: x * 2 })
+        .map(|x| bytemuck::cast::<_, u64>(x))
+        .collect::<Vec<_>>();
+
+    match futures::executor::block_on(execute_kernel(shader_binary, data)) {
+        Some(out) => {
+            let result = out
+                .iter()
+                .map(|x| bytemuck::cast::<_, shared::TestVec>(*x))
+                .collect::<Vec<_>>();
+
+            println!("Execution result: {:?}", result)
+        },
         None => println!("Error executing kernel")
     }
 }

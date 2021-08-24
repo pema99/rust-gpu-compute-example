@@ -8,3 +8,4 @@ crate-type = ["dylib", "lib"]
 
 [dependencies]
 spirv-std = { git = "https://github.com/EmbarkStudios/rust-gpu", features = ["glam"] }
+shared = { "path"="../../shared" }
