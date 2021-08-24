@@ -1,5 +1,5 @@
 # rust-gpu-compute-example
-Minimal example of using rust-gpu and wgpu to dispatch compute shaders
+Minimal example of using rust-gpu and wgpu to dispatch compute shaders written in rust.
 
 Adapted from rust-gpu example source.
 
